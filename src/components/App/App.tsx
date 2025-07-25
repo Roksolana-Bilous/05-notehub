@@ -98,7 +98,6 @@ export default function App() {
           deleteNote={(id: number) => deleteMutation.mutate(id)}
         />
       )}
-
       {showModal && (
         <Modal closeWindow={closeModal}>
           <NoteForm onClose={closeModal} />
