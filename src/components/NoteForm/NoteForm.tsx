@@ -2,16 +2,18 @@ import css from "./NoteForm.module.css";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import type { FormikHelpers } from "formik";
 import * as Yup from "yup";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { createNote } from "../../services/noteService";
+import toast from "react-hot-toast";
 
-export type newNoteData = {
+export type NewNoteData = {
   title: string;
   content: string;
   tag: "Todo" | "Work" | "Personal" | "Meeting" | "Shopping";
 };
 
 interface NoteFormProps {
-  cancelButton: () => void;
-  onSubmit: (values: newNoteData) => void;
+  onClose: () => void;
 }
 
 const validationSchema = Yup.object().shape({
@@ -25,12 +27,26 @@ const validationSchema = Yup.object().shape({
     .required("Tag is required"),
 });
 
-export default function NoteForm({ cancelButton, onSubmit }: NoteFormProps) {
+export default function NoteForm({ onClose }: NoteFormProps) {
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation({
+    mutationFn: createNote,
+    onSuccess: () => {
+      toast.success("Note created successfully");
+      queryClient.invalidateQueries({ queryKey: ["notes"] });
+      onClose();
+    },
+    onError: () => {
+      toast.error("Failed to create note");
+    },
+  });
+
   const handleSubmit = (
-    values:newNoteData,
-    { setSubmitting, resetForm }: FormikHelpers<newNoteData>
+    values: NewNoteData,
+    { setSubmitting, resetForm }: FormikHelpers<NewNoteData>
   ) => {
-    onSubmit(values);
+    mutation.mutate(values);
     setSubmitting(false);
     resetForm();
   };
@@ -42,8 +58,8 @@ export default function NoteForm({ cancelButton, onSubmit }: NoteFormProps) {
         content: "",
         tag: "Todo",
       }}
-      onSubmit={handleSubmit}
       validationSchema={validationSchema}
+      onSubmit={handleSubmit}
     >
       <Form className={css.form}>
         <div className={css.formGroup}>
@@ -86,7 +102,7 @@ export default function NoteForm({ cancelButton, onSubmit }: NoteFormProps) {
           <button
             type="button"
             className={css.cancelButton}
-            onClick={cancelButton}
+            onClick={onClose}
           >
             Cancel
           </button>

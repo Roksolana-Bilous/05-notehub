@@ -5,6 +5,7 @@ interface NoteListProps {
   notes: Note[];
   deleteNote: (id: number) => void;
 }
+
 export default function NoteList({ notes, deleteNote }: NoteListProps) {
   return (
     <ul className={css.list}>

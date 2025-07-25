@@ -7,25 +7,23 @@ import Modal from "../Modal/Modal";
 import NoteForm from "../NoteForm/NoteForm";
 import { useDebounce } from "use-debounce";
 import { keepPreviousData, useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchNotes, createNote, deleteNote } from "../../services/noteService";
+import { fetchNotes, deleteNote } from "../../services/noteService";
 import toast, { Toaster } from "react-hot-toast";
 import type { Note } from "../../types/note";
 
 export default function App() {
   const queryClient = useQueryClient();
-  const [showModal, setShowModal] = useState(false);
-  const [search, setSearch] = useState("");
+
+  const [showModal, setShowModal] = useState<boolean>(false);
+  const [search, setSearch] = useState<string>("");
   const [debouncedSearch] = useDebounce(search, 500);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const itemsPerPage: number = 12;
 
-  const openModal = () => setShowModal(true);
-  const closeModal = () => {
-    setShowModal(false);
-    setCurrentPage(1);
-  };
+  const openModal = (): void => setShowModal(true);
+  const closeModal = (): void => setShowModal(false);
 
-  const handleSearchChange = (value: string) => {
+  const handleSearchChange = (value: string): void => {
     setSearch(value);
     setCurrentPage(1);
   };
@@ -33,22 +31,10 @@ export default function App() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["notes", debouncedSearch, currentPage, itemsPerPage],
     queryFn: () => {
-      const finalSearch = debouncedSearch === "" ? " " : debouncedSearch;
+      const finalSearch = debouncedSearch.trim() === "" ? " " : debouncedSearch;
       return fetchNotes({ search: finalSearch, page: currentPage, perPage: itemsPerPage });
     },
     placeholderData: keepPreviousData,
-  });
-
-  const createMutation = useMutation({
-    mutationFn: (newNoteData: Note) => createNote(newNoteData),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notes"] });
-      toast.success("The note was created successfully!");
-      closeModal();
-    },
-    onError: () => {
-      toast.error("An error occurred while creating the note.");
-    },
   });
 
   const deleteMutation = useMutation({
@@ -64,15 +50,22 @@ export default function App() {
 
   useEffect(() => {
     if (!showModal) return;
+    document.body.style.overflow = "hidden";
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") closeModal();
     };
+
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = "";
+      document.removeEventListener("keydown", handleKeyDown);
+    };
   }, [showModal]);
 
-  const notesToDisplay = data?.notes ?? [];
-  const totalPages = data?.totalPages ?? 0;
+  const notesToDisplay: Note[] = data?.notes ?? [];
+  const totalPages: number = data?.totalPages ?? 0;
 
   return (
     <div className={css.app}>
@@ -83,7 +76,7 @@ export default function App() {
           <Pagination
             pageCount={totalPages}
             currentPage={currentPage - 1}
-            onPageChange={({ selected }) => setCurrentPage(selected + 1)}
+            onPageChange={({ selected }: { selected: number }) => setCurrentPage(selected + 1)}
           />
         )}
 
@@ -100,19 +93,20 @@ export default function App() {
       )}
 
       {notesToDisplay.length > 0 && (
-        <NoteList notes={notesToDisplay} deleteNote={(id) => deleteMutation.mutate(id)} />
+        <NoteList
+          notes={notesToDisplay}
+          deleteNote={(id: number) => deleteMutation.mutate(id)}
+        />
       )}
 
       {showModal && (
         <Modal closeWindow={closeModal}>
-            <NoteForm
-              cancelButton={closeModal}
-              onSubmit={(values) => createMutation.mutate({ ...values, id: 0, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() })}
-            />
-          </Modal>
+          <NoteForm onClose={closeModal} />
+        </Modal>
       )}
 
       <Toaster />
     </div>
   );
 }
+
